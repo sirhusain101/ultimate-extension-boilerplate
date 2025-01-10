@@ -1,6 +1,6 @@
 # Ultimate Extension Boilerplate
 
-A boilerplate template for Chrome and Firefox Extensions with webpack, minification, live update, seperate manifest generation and more.
+A boilerplate template for Chrome and Firefox Extensions with webpack, minification, live update, separate manifest generation and more.
 
 ## Table of Contents
 
