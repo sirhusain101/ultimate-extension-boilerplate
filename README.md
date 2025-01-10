@@ -25,7 +25,7 @@ Use the `"Use this template"` button to create a new repository for your extensi
 
 ### 2. Change the License and Readme:
 
-The first thing to do after creating your repository from this template is to change the `LICENSE` and `README` files to reflect your extension.
+The first thing to do after creating your repository from this template is to change the `LICENSE` and `README` files to reflect your extension's.
 
 ### 3. Clone your repository:
 
@@ -114,13 +114,13 @@ your-repo-name/
 
   - You can load the extension in your browser for testing:
 
-    Chrome
+    Chrome:
 
     - Open Chrome and navigate to `chrome://extensions/`.
     - Enable "Developer mode" in the top right corner.
     - Click "Load unpacked" and select the `live/chrome` directory.
 
-    Firefox
+    Firefox:
 
     - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
     - Click "Load Temporary Add-on" and select the `live/firefox/manifest.json` file.
