@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rate Extension</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        color: #ffffff;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #222527;
+        font-size: 14px;
+      }
+
+      h1 {
+        text-align: center;
+        margin: 100px 0 20px 0;
+      }
+
+      /* Store section */
+      #store-buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .store-button {
+        height: 60px;
+        width: auto;
+        border-radius: 8px;
+        transition: transform 0.3s ease;
+        display: block;
+      }
+
+      .store-button:hover {
+        transform: scale(1.05);
+      }
+
+      .store-button:active {
+        transform: scale(0.95);
+      }
+
+      /* Media query*/
+      @media (max-width: 768px) {
+        #store-buttons-container {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Choose the Store where you want to Rate/Review:</h1>
+    <div id="store-buttons-container">
+      <a
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        id="chrome"
+        class="store-link"
+      >
+        <img
+          src="/assets/chrome.webp"
+          alt="Get it from Chrome Web Store"
+          class="store-button"
+          loading="lazy"
+        />
+      </a>
+      <a
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        id="firefox"
+        class="store-link"
+      >
+        <img
+          src="/assets/firefox.webp"
+          alt="Get it from Firefox Addon Store"
+          class="store-button"
+          loading="lazy"
+        />
+      </a>
+      <a
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        id="edge"
+        class="store-link"
+      >
+        <img
+          src="/assets/edge.webp"
+          alt="Get it from Edge Store"
+          class="store-button"
+          loading="lazy"
+        />
+      </a>
+    </div>
+  </body>
+</html>

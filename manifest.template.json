@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Extension Name",
+  "version": "1.0",
+  "description": "",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "sidePanel",
+    "tabs",
+    "contextMenus",
+    "clipboardRead"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "sidebar_action": {
+    "default_panel": "sidepanel.html",
+    "open_at_install": true
+  },
+  "devtools_page": "devtools.html",
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>", "https://*.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "icons": {
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{}"
+    }
+  }
+}
