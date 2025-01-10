@@ -4,12 +4,29 @@ A boilerplate template for Chrome and Firefox Extensions with webpack, minificat
 
 ## Table of Contents
 
+- [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Structure](#structure)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Features
+
+- **Cross-Browser Support:** Easily build extensions for both Chrome and Firefox with minimal configuration.
+- **Webpack Integration:** Utilize Webpack for module bundling, asset management, and optimization.
+- **Common Extension Files:** The `src/` directory comes pre-populated with common JS, CSS, and HTML files needed for extension development, complete with appropriate Webpack imports.
+- **Manifest Generation:** Automatically generate the appropriate manifest files for Chrome and Firefox based on your configuration.
+- **Live Update:** Watch for code changes in the `src/` directory and automatically build them in the `live/` directory for seamless debugging.
+- **Separate Build Outputs:** Distinct directories for production and development builds, making it easy to manage ifferent versions.
+- **Minification:** Built-in support for minifying JavaScript and CSS files for production builds.
+- **Customizable Structure:** A clear and organized directory structure that can be easily modified to fit your extension's needs.
+- **Asset Management:** Simple organization for icons and images within the `src/assets/` directory.
+
+- **Documentation:** Comprehensive README to guide you through setup, usage, and contribution.
+
+Feel free to suggest additional features or improvements!
 
 ## Prerequisites
 
@@ -20,7 +37,7 @@ Before you begin, ensure you have the following installed:
 
 ## Installation
 
-### 1. Create a Repo:
+### 1. Create a Repository:
 
 Use the `"Use this template"` button to create a new repository for your extension based on this template.
 
@@ -145,6 +162,10 @@ your-repo-name/
 ## Contributing
 
 If you have any suggestions, feedback, or want to contribute to this template, feel free to do so! Here are a few ways you can contribute:
+
+- ### Star the Repository:
+
+  If you find this boilerplate useful, please consider starring the repository! It helps others discover it and shows your support.
 
 - ### Open Issues:
 
