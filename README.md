@@ -129,6 +129,7 @@ your-repo-name/
     - Set the environment to development.
     - Start Webpack in watch mode, which will automatically rebuild your extension when you make changes to the source files.
     - Output the built files to the `live/` directory for each browser.
+    - **Note:** It monitors all extension files except `manifest.template.json`. Therefore, if you make any manifest related changes, you will need to run `npm run dev `in the terminal again to apply those changes in the `live/` directory.
 
   - You can load the extension in your browser for testing:
 
