@@ -119,6 +119,7 @@ const createConfig = (browser) => {
       popup: "./src/popup.js",
       sidepanel: "./src/sidepanel.js",
       devtools: "./src/devtools.js",
+      devtools: "./src/panel.js",
     },
     output: {
       path: isProduction
@@ -179,6 +180,18 @@ const createConfig = (browser) => {
         template: "./src/devtools.html", // Chrome/Firefox dev console page, if you make extension that need access to dev console
         filename: "devtools.html",
         chunks: ["devtools"],
+        minify: isProduction
+          ? {
+              removeComments: true,
+              collapseWhitespace: true,
+              removeAttributeQuotes: true,
+            }
+          : false,
+      }),
+      new HtmlWebpackPlugin({
+        template: "./src/panel.html", // Sidebar pane under Chrome/Firefox dev console Elements/Inspector panel, this has to be separate from devtools, otherwise firefox creates non-stop sidebar panes
+        filename: "panel.html",
+        chunks: ["panel"],
         minify: isProduction
           ? {
               removeComments: true,
