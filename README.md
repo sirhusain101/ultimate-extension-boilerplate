@@ -82,6 +82,9 @@ your-repo-name/
 │   ├── devtools.js         # Devtools page script
 │   ├── devtools.html       # Devtools HTML
 │   ├── devtools.css        # Devtools styles
+│   ├── panel.js            # Dev Sidebar Pane page script
+│   ├── panel.html          # Dev Sidebar Pane HTML
+│   ├── panel.css           # Dev Sidebar Pane styles
 │   └── rate_extension.html # Rate extension page
 ├── webpack.config.js       # Webpack configuration
 ├── manifest.template.json  # Manifest template
