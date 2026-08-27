@@ -59,8 +59,8 @@ const generateManifest = (browser) => {
   const template = JSON.parse(
     fs.readFileSync(
       path.resolve(__dirname, "./manifest.template.json"),
-      "utf-8"
-    )
+      "utf-8",
+    ),
   );
 
   // Add/Remove/Modify manifest template based on browser here
@@ -91,12 +91,12 @@ const generateAndWriteManifest = (browser, isProduction) => {
       ? chromeOutputPath
       : firefoxOutputPath
     : browser === "chrome"
-    ? chromeLivePath
-    : firefoxLivePath;
+      ? chromeLivePath
+      : firefoxLivePath;
 
   fs.writeFileSync(
     path.resolve(outputPath, "manifest.json"),
-    JSON.stringify(manifest, null, 2)
+    JSON.stringify(manifest, null, 2),
   );
 };
 
@@ -115,6 +115,7 @@ const createConfig = (browser) => {
   const config = {
     mode: isProduction ? "production" : "development", // Set mode based on environment
     entry: {
+      content: "./src/content.js",
       background: "./src/background.js",
       popup: "./src/popup.js",
       sidepanel: "./src/sidepanel.js",
