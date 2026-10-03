@@ -1,4 +1,6 @@
 const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 const { webpack } = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -6,6 +8,22 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const TerserPlugin = require("terser-webpack-plugin");
 const { RawSource } = require("webpack").sources;
+
+// ==========================================
+// Firefox ID Persistence Logic
+// ==========================================
+const getFirefoxId = () => {
+  const idFile = path.resolve(__dirname, ".firefox-id");
+  if (fs.existsSync(idFile)) {
+    return fs.readFileSync(idFile, "utf8").trim();
+  } else {
+    // Firefox requires UUIDs to be wrapped in curly braces
+    const newId = `{${crypto.randomUUID()}}`;
+    fs.writeFileSync(idFile, newId, "utf8");
+    return newId;
+  }
+};
+const FIREFOX_ID = getFirefoxId();
 
 // ==========================================
 // 1. THE SWITCHBOARD (Edit this for new projects)
@@ -35,12 +53,13 @@ const EXT_CONFIG = {
     "<all_urls>": false,
   },
 
+  // True/False toggles for extension features
   features: {
     popup: true, // Requires src/popup.html & src/popup.js
     sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
     devtools: false, // Requires src/devtools.html/js & src/panel.html/js
     background: false, // Requires src/background.js
-    libsFolder: false, // Copies src/libs folder directly to output without Webpack processing
+    libsFolder: false, // Copies src/libs folder which may contain different js libraries
   },
 
   // Configure all Content Scripts here
@@ -154,7 +173,7 @@ const generateManifest = (browser) => {
     ...(browser === "firefox" && {
       browser_specific_settings: {
         gecko: {
-          id: "dev@myextension.com",
+          id: FIREFOX_ID, // Automatically uses the generated/persisted UUID
           data_collection_permissions: {
             required: ["none"],
           },
@@ -246,7 +265,7 @@ const createConfig = (browser) => {
     { from: "./src/assets/", to: "assets", noErrorOnMissing: true },
   ];
 
-  if (EXT_CONFIG.features.libs) {
+  if (EXT_CONFIG.features.libsFolder) {
     copyPatterns.push({
       from: "./src/libs/",
       to: "libs",

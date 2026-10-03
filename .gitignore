@@ -12,6 +12,7 @@ build/
 
 # Environment variables
 .env
+.firefox-id
 
 # OS generated files
 .DS_Store
