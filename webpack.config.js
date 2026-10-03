@@ -17,7 +17,6 @@ const getFirefoxId = () => {
   if (fs.existsSync(idFile)) {
     return fs.readFileSync(idFile, "utf8").trim();
   } else {
-    // Firefox requires UUIDs to be wrapped in curly braces
     const newId = `{${crypto.randomUUID()}}`;
     fs.writeFileSync(idFile, newId, "utf8");
     return newId;
@@ -26,7 +25,7 @@ const getFirefoxId = () => {
 const FIREFOX_ID = getFirefoxId();
 
 // ==========================================
-// 1. THE SWITCHBOARD (Edit this for new projects)
+// 1. THE SWITCHBOARD
 // ==========================================
 const EXT_CONFIG = {
   meta: {
@@ -35,7 +34,6 @@ const EXT_CONFIG = {
     description: "A web browser extension.",
   },
 
-  // True/False toggles for standard permissions
   permissions: {
     storage: true,
     activeTab: true,
@@ -46,45 +44,118 @@ const EXT_CONFIG = {
     downloads: false,
   },
 
-  // True/False toggles for URL access
   hostPermissions: {
     "https://*.youtube.com/*": true,
     "https://*.github.com/*": false,
     "<all_urls>": false,
   },
 
-  // True/False toggles for extension features
   features: {
     popup: true, // Requires src/popup.html & src/popup.js
     sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
-    devtools: false, // Requires src/devtools.html/js & src/panel.html/js
+    devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
     background: false, // Requires src/background.js
-    libsFolder: false, // Copies src/libs folder which may contain different js libraries
+    libsFolder: true, // Copies src/libs folder directly to output
   },
 
-  // Configure all Content Scripts here
   contentScripts: {
     default: {
-      enabled: true, // Requires src/content.js
+      enabled: true,
       matches: ["<all_urls>", "https://*.youtube.com/*"],
-      css: true, // Requires import './content.css' inside content.js
+      css: true,
     },
     extra: [
       {
         enabled: false,
-        name: "content_website1", // Requires src/content_website1.js
+        name: "content_website1",
         matches: ["https://*.youtube.com/*"],
-        css: true, // Requires import './content_website1.css' inside JS
+        css: true,
       },
       {
-        enabled: false, // Toggle off to exclude from build
-        name: "content_website2", // Requires src/content_website2.js
+        enabled: false,
+        name: "content_website2",
         matches: ["https://*.github.com/*"],
         css: false,
       },
     ],
   },
 };
+
+// ==========================================
+// 1.5 AUTO-SCAFFOLDER
+// ==========================================
+const scaffoldFile = (filePath, content) => {
+  const absolutePath = path.resolve(__dirname, filePath);
+  if (!fs.existsSync(path.dirname(absolutePath))) {
+    fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
+  }
+  if (!fs.existsSync(absolutePath)) {
+    fs.writeFileSync(absolutePath, content, "utf8");
+    console.log(`✨ Auto-generated missing file: ${filePath}`);
+  }
+};
+
+const templates = {
+  html: (title) =>
+    `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${title}</title>\n</head>\n<body>\n  <h1>${title} Loaded</h1>\n</body>\n</html>`,
+  uiJs: (name) =>
+    `import "./${name}.css";\nconsole.log("${name} script running!");`,
+  uiCss: () =>
+    `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
+  bgJs: () =>
+    `chrome.runtime.onInstalled.addListener(() => {\n  console.log("Extension installed");\n});`,
+  contentJs: (name) => `import "./${name}.css";`,
+  contentCss: () => ``,
+  devtoolsJs: () => `// USE CASE 1: Top-Level Panel
+// Creates a brand new, dedicated tab at the very top of the DevTools window (like Elements, Console, Network).
+// Best for: Massive, standalone debugging tools that need a lot of screen space (e.g., React DevTools).
+chrome.devtools.panels.create("My Panel", null, "devpanel.html", () => {});
+
+// USE CASE 2: Elements Sidebar Pane
+// Creates a sidebar pane inside the existing "Elements" tab (next to Styles, Computed, Event Listeners).
+// Best for: Tools that specifically analyze or modify the HTML DOM node that the user has currently selected.
+chrome.devtools.panels.elements.createSidebarPane("My Sidebar", (sidebar) => {
+  sidebar.setPage("devpanel.html");
+});`,
+};
+
+const runScaffolder = () => {
+  if (EXT_CONFIG.features.popup) {
+    scaffoldFile("src/popup.html", templates.html("Popup"));
+    scaffoldFile("src/popup.js", templates.uiJs("popup"));
+    scaffoldFile("src/popup.css", templates.uiCss());
+  }
+  if (EXT_CONFIG.features.sidepanel) {
+    scaffoldFile("src/sidepanel.html", templates.html("Sidepanel"));
+    scaffoldFile("src/sidepanel.js", templates.uiJs("sidepanel"));
+    scaffoldFile("src/sidepanel.css", templates.uiCss());
+  }
+  if (EXT_CONFIG.features.devtools) {
+    scaffoldFile("src/devtools.html", templates.html("Devtools"));
+    scaffoldFile("src/devtools.js", templates.devtoolsJs());
+    scaffoldFile("src/devpanel.html", templates.html("DevPanel"));
+    scaffoldFile("src/devpanel.js", templates.uiJs("devpanel"));
+    scaffoldFile("src/devpanel.css", templates.uiCss());
+  }
+  if (EXT_CONFIG.features.background) {
+    scaffoldFile("src/background.js", templates.bgJs());
+  }
+
+  const checkContentScript = (scriptObj) => {
+    if (scriptObj.enabled) {
+      const name = scriptObj.name || "content";
+      scaffoldFile(`src/${name}.js`, templates.contentJs(name));
+      if (scriptObj.css)
+        scaffoldFile(`src/${name}.css`, templates.contentCss());
+    }
+  };
+
+  checkContentScript({ ...EXT_CONFIG.contentScripts.default, name: "content" });
+  EXT_CONFIG.contentScripts.extra.forEach(checkContentScript);
+};
+
+// Execute immediately before Webpack starts
+runScaffolder();
 
 // ==========================================
 // 2. MANIFEST GENERATOR
@@ -102,7 +173,6 @@ const generateManifest = (browser) => {
     (key) => EXT_CONFIG.hostPermissions[key],
   );
 
-  // Compile active content scripts
   const activeContentScripts = [];
   if (EXT_CONFIG.contentScripts.default.enabled) {
     activeContentScripts.push({
@@ -173,10 +243,8 @@ const generateManifest = (browser) => {
     ...(browser === "firefox" && {
       browser_specific_settings: {
         gecko: {
-          id: FIREFOX_ID, // Automatically uses the generated/persisted UUID
-          data_collection_permissions: {
-            required: ["none"],
-          },
+          id: FIREFOX_ID,
+          data_collection_permissions: { required: ["none"] },
         },
       },
     }),
@@ -227,18 +295,15 @@ const createConfig = (browser) => {
   if (EXT_CONFIG.features.sidepanel) entry.sidepanel = "./src/sidepanel.js";
   if (EXT_CONFIG.features.devtools) {
     entry.devtools = "./src/devtools.js";
-    entry.panel = "./src/panel.js";
+    entry.devpanel = "./src/devpanel.js";
   }
 
-  // Inject enabled content scripts into Webpack entry points
   if (EXT_CONFIG.contentScripts.default.enabled) {
     entry.content = "./src/content.js";
   }
 
   EXT_CONFIG.contentScripts.extra.forEach((script) => {
-    if (script.enabled) {
-      entry[script.name] = `./src/${script.name}.js`;
-    }
+    if (script.enabled) entry[script.name] = `./src/${script.name}.js`;
   });
 
   const htmlPlugins = [];
@@ -258,7 +323,7 @@ const createConfig = (browser) => {
   if (EXT_CONFIG.features.sidepanel) addHtml("sidepanel");
   if (EXT_CONFIG.features.devtools) {
     addHtml("devtools");
-    addHtml("panel");
+    addHtml("devpanel");
   }
 
   const copyPatterns = [
@@ -302,9 +367,7 @@ const createConfig = (browser) => {
       ...htmlPlugins,
       new MiniCssExtractPlugin({ filename: "[name].css" }),
       new GenerateManifestPlugin(browser),
-      new CopyWebpackPlugin({
-        patterns: copyPatterns,
-      }),
+      new CopyWebpackPlugin({ patterns: copyPatterns }),
     ],
     watch: !isProduction,
   };
