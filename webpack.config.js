@@ -16,13 +16,33 @@ const EXT_CONFIG = {
     version: "1.0",
     description: "A web browser extension.",
   },
+
+  // True/False toggles for standard permissions
+  permissions: {
+    storage: true,
+    activeTab: true,
+    scripting: true,
+    tabs: false,
+    contextMenus: false,
+    alarms: false,
+    downloads: false,
+  },
+
+  // True/False toggles for URL access
+  hostPermissions: {
+    "https://*.youtube.com/*": true,
+    "https://*.github.com/*": false,
+    "<all_urls>": false,
+  },
+
   features: {
     popup: true, // Requires src/popup.html & src/popup.js
     sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
     devtools: false, // Requires src/devtools.html/js & src/panel.html/js
     background: false, // Requires src/background.js
-    libs: false, // Copies src/libs folder directly to output without Webpack processing
+    libsFolder: false, // Copies src/libs folder directly to output without Webpack processing
   },
+
   // Configure all Content Scripts here
   contentScripts: {
     default: {
@@ -44,22 +64,6 @@ const EXT_CONFIG = {
         css: false,
       },
     ],
-  },
-  // True/False toggles for standard permissions
-  permissions: {
-    storage: true,
-    activeTab: true,
-    scripting: true,
-    tabs: false,
-    contextMenus: false,
-    alarms: false,
-    downloads: false,
-  },
-  // True/False toggles for URL access
-  hostPermissions: {
-    "https://*.youtube.com/*": true,
-    "https://*.github.com/*": false,
-    "<all_urls>": false,
   },
 };
 
