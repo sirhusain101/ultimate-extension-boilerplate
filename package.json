@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "webpack.config.js",
   "scripts": {
-    "dev": "nodemon -L --watch webpack.config.js --delay 500000 --exec \"cross-env NODE_ENV=development webpack\"",
+    "dev": "nodemon -L --watch webpack.config.js --delay 2 --exec \"cross-env NODE_ENV=development webpack\"",
     "build": "cross-env NODE_ENV=production webpack"
   },
   "keywords": [],

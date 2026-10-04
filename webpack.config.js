@@ -35,9 +35,9 @@ const EXT_CONFIG = {
   },
 
   permissions: {
-    storage: false,
-    activeTab: false,
-    scripting: false,
+    storage: true,
+    activeTab: true,
+    scripting: true,
     tabs: false,
     contextMenus: false,
     alarms: false,
@@ -51,11 +51,11 @@ const EXT_CONFIG = {
   },
 
   features: {
-    popup: false, // Requires src/popup.html & src/popup.js
-    sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
+    popup: true, // Requires src/popup.html & src/popup.js
+    sidepanel: true, // Requires src/sidepanel.html & src/sidepanel.js
     devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
-    background: false, // Requires src/background.js
-    libsFolder: true, // Copies src/libs folder directly to output
+    background: true, // Requires src/background.js
+    libsFolder: false, // Copies src/libs folder directly to output
   },
 
   contentScripts: {
@@ -99,11 +99,25 @@ const templates = {
   html: (title) =>
     `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${title}</title>\n</head>\n<body>\n  <h1>${title} Loaded</h1>\n</body>\n</html>`,
   uiJs: (name) =>
-    `import "./${name}.css";\nconsole.log("${name} script running!");`,
+    `import "./${name}.css";`,
   uiCss: () =>
     `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
-  bgJs: () =>
-    `chrome.runtime.onInstalled.addListener(() => {\n  console.log("Extension installed");\n});`,
+  bgJs: (hasSidepanel) => {
+    let code = ``;
+    if (hasSidepanel) {
+      code += `\n// Open sidepanel on icon click (Chrome)\n`;
+      code += `if (typeof chrome !== 'undefined' && chrome.sidePanel) {\n`;
+      code += `  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });\n`;
+      code += `}\n\n`;
+      code += `// Open sidebar on icon click (Firefox)\n`;
+      code += `if (typeof browser !== 'undefined' && browser.sidebarAction) {\n`;
+      code += `  browser.action.onClicked.addListener(() => {\n`;
+      code += `    browser.sidebarAction.toggle();\n`;
+      code += `  });\n`;
+      code += `}\n`;
+    }
+    return code;
+  },
   contentJs: (name) => `import "./${name}.css";`,
   contentCss: () => ``,
   devtoolsJs: () => `// USE CASE 1: Top-Level Panel
@@ -134,7 +148,10 @@ const runScaffolder = () => {
     scaffoldFile("src/devpanel.css", templates.uiCss());
   }
   if (EXT_CONFIG.features.background) {
-    scaffoldFile("src/background.js", templates.bgJs());
+    scaffoldFile(
+      "src/background.js",
+      templates.bgJs(EXT_CONFIG.features.sidepanel),
+    );
   }
 
   const checkContentScript = (scriptObj) => {
