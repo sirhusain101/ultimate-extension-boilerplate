@@ -52,12 +52,12 @@ const EXT_CONFIG = {
 
   features: {
     popup: true, // Requires src/popup.html & src/popup.js
-    sidepanel: true, // Requires src/sidepanel.html & src/sidepanel.js
+    sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
     devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
     background: true, // Requires src/background.js
     libsFolder: false, // Copies src/libs folder directly to output
     aboutFolder: {
-      coffee: true, // Processes src/about/coffee.html (if true)
+      coffee: false, // Processes src/about/coffee.html (if true)
       rate: true, // Processes src/about/rate.html (if true)
       contact: true, // Processes src/about/contact.html (if true)
     },
