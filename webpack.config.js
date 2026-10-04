@@ -56,6 +56,11 @@ const EXT_CONFIG = {
     devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
     background: true, // Requires src/background.js
     libsFolder: false, // Copies src/libs folder directly to output
+    aboutFolder: {
+      coffee: true, // Processes src/about/coffee.html (if true)
+      rate: true, // Processes src/about/rate.html (if true)
+      contact: true, // Processes src/about/contact.html (if true)
+    },
   },
 
   contentScripts: {
@@ -298,17 +303,14 @@ class StrictSyncPlugin {
       const outputPath = compiler.options.output.path;
       if (!fs.existsSync(outputPath)) return;
 
-      // Create a Set of exactly what Webpack generated on this specific run
       const expectedFiles = new Set(Object.keys(compilation.assets));
 
-      // Recursively read the physical output folder
       const walkDir = (dir, fileList = []) => {
         fs.readdirSync(dir).forEach((file) => {
           const filePath = path.join(dir, file);
           if (fs.statSync(filePath).isDirectory()) {
             walkDir(filePath, fileList);
           } else {
-            // Ensure paths match Webpack's forward-slash format
             fileList.push(
               path.relative(outputPath, filePath).split(path.sep).join("/"),
             );
@@ -319,7 +321,6 @@ class StrictSyncPlugin {
 
       const physicalFiles = walkDir(outputPath);
 
-      // Instantly delete any physical file that wasn't strictly generated in this run
       physicalFiles.forEach((file) => {
         if (!expectedFiles.has(file)) {
           fs.unlinkSync(path.join(outputPath, file));
@@ -345,6 +346,12 @@ const createConfig = (browser) => {
   if (EXT_CONFIG.features.devtools) {
     entry.devtools = "./src/devtools.js";
     entry.devpanel = "./src/devpanel.js";
+  }
+
+  // Register Shared 'About' CSS directly (no JS file needed in your src folder)
+  const about = EXT_CONFIG.features.aboutFolder;
+  if (about.coffee || about.rate || about.contact) {
+    entry.about = "./src/about/about.css";
   }
 
   if (EXT_CONFIG.contentScripts.default.enabled) {
@@ -375,29 +382,44 @@ const createConfig = (browser) => {
     addHtml("devpanel");
   }
 
+  // Register About HTML Pages
+  const addAboutHtml = (name) =>
+    htmlPlugins.push(
+      new HtmlWebpackPlugin({
+        template: `./src/about/${name}.html`,
+        filename: `about/${name}.html`,
+        chunks: ["about"], // Automatically injects about.css into the HTML
+        minify: isProduction
+          ? { collapseWhitespace: true, removeComments: true }
+          : false,
+      }),
+    );
+
+  if (about.coffee) addAboutHtml("coffee");
+  if (about.rate) addAboutHtml("rate");
+  if (about.contact) addAboutHtml("contact");
+
   const copyPatterns = [
     { from: "./src/assets/", to: "assets", noErrorOnMissing: true },
     { from: "./README.md", to: "" },
-    { from: "./LICENSE", to: "" }, // IMPORTANT: Replace the license file with your extension's license file
+    { from: "./LICENSE", to: "" },
   ];
 
   if (EXT_CONFIG.features.libsFolder) {
     copyPatterns.push({
       from: "./src/libs/",
       to: "libs",
-      noErrorOnMissing: true,
+      no,
+      ErrorOnMissing: true,
     });
   }
 
   return {
     mode: isProduction ? "production" : "development",
 
-    // 🔥 PERSISTENT CACHING WITH STRICT DEPENDENCIES
     cache: {
       type: "filesystem",
       buildDependencies: {
-        // This is the magic line. It forces Webpack to completely bust its cache
-        // the moment you hit "save" on this config file, ensuring toggles always apply.
         config: [__filename],
       },
     },
@@ -406,7 +428,7 @@ const createConfig = (browser) => {
     output: {
       path: path.join(outputDir, browser),
       filename: "[name].js",
-      clean: false, // Turned off so StrictSyncPlugin handles cleanup flawlessly
+      clean: false,
     },
     devtool: false,
     module: {
@@ -430,14 +452,13 @@ const createConfig = (browser) => {
       new MiniCssExtractPlugin({ filename: "[name].css" }),
       new GenerateManifestPlugin(browser),
       new CopyWebpackPlugin({ patterns: copyPatterns }),
-      new StrictSyncPlugin(), // 🔥 Cleans the output directory dynamically
+      new StrictSyncPlugin(),
     ],
     watch: !isProduction,
 
-    // 🔥 THE PAUSER
     watchOptions: {
-      aggregateTimeout: 1000, // Waits 600ms after you stop saving to trigger a rebuild
-      ignored: /node_modules/, // Saves CPU and battery by ignoring module changes
+      aggregateTimeout: 1000,
+      ignored: /node_modules/,
     },
   };
 };
