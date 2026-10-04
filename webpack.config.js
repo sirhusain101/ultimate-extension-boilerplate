@@ -1,6 +1,8 @@
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const { ZipArchive } = require("archiver");
+const { exec } = require("child_process");
 const { webpack } = require("webpack");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -14,13 +16,17 @@ const { RawSource } = require("webpack").sources;
 // ==========================================
 const getFirefoxId = () => {
   const idFile = path.resolve(__dirname, ".firefox-id");
+
   if (fs.existsSync(idFile)) {
-    return fs.readFileSync(idFile, "utf8").trim();
-  } else {
-    const newId = `{${crypto.randomUUID()}}`;
-    fs.writeFileSync(idFile, newId, "utf8");
-    return newId;
+    const existingId = fs.readFileSync(idFile, "utf8").trim();
+    // If the file exists AND has text inside, use it.
+    if (existingId) return existingId;
   }
+
+  // If the file does NOT exist, OR if it's completely empty, generate a new one.
+  const newId = `{${crypto.randomUUID()}}`;
+  fs.writeFileSync(idFile, newId, "utf8");
+  return newId;
 };
 const FIREFOX_ID = getFirefoxId();
 
@@ -51,15 +57,15 @@ const EXT_CONFIG = {
   },
 
   features: {
-    popup: true, // Requires src/popup.html & src/popup.js
-    sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
-    devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
-    background: true, // Requires src/background.js
-    libsFolder: false, // Copies src/libs folder directly to output
-    aboutFolder: {
-      coffee: false, // Processes src/about/coffee.html (if true)
-      rate: true, // Processes src/about/rate.html (if true)
-      contact: true, // Processes src/about/contact.html (if true)
+    popup: true,
+    sidepanel: true,
+    devtools: false,
+    background: true,
+    libsFolder: false,
+    aboutPages: {
+      coffee: true,
+      rate: true,
+      contact: true,
     },
   },
 
@@ -331,6 +337,71 @@ class StrictSyncPlugin {
   }
 }
 
+class ZipExtensionsPlugin {
+  constructor(browser, version) {
+    this.browser = browser;
+    this.version = version;
+  }
+  apply(compiler) {
+    // Only run this plugin during the production build
+    if (compiler.options.mode !== "production") return;
+
+    compiler.hooks.done.tapAsync("ZipExtensionsPlugin", (stats, callback) => {
+      const outputDir = compiler.options.output.path;
+      const distDir = path.dirname(outputDir);
+
+      const createZip = (targetBrowser) => {
+        return new Promise((resolve, reject) => {
+          const zipFilePath = path.join(
+            distDir,
+            `${targetBrowser}-v${this.version}.zip`,
+          );
+          const output = fs.createWriteStream(zipFilePath);
+          // 🔥 Level 6 is "normal" compression (balance of speed and file size)
+          const archive = new ZipArchive({ zlib: { level: 6 } });
+
+          output.on("close", () => {
+            console.log(
+              `\n📦 Successfully created: ${targetBrowser}-v${this.version}.zip`,
+            );
+            resolve();
+          });
+          archive.on("error", (err) => reject(err));
+
+          archive.pipe(output);
+          archive.directory(outputDir, false);
+          archive.finalize();
+        });
+      };
+
+      const tasks = [createZip(this.browser)];
+
+      // If we are currently building Chrome, also create an identical zip for Edge
+      if (this.browser === "chrome") {
+        tasks.push(createZip("edge"));
+      }
+
+      Promise.all(tasks)
+        .then(() => {
+          // 🔥 Open the dist folder only AFTER the final browser (Firefox) finishes zipping
+          if (this.browser === "firefox") {
+            const command =
+              process.platform === "win32"
+                ? `explorer "${distDir}"`
+                : process.platform === "darwin"
+                  ? `open "${distDir}"`
+                  : `xdg-open "${distDir}"`;
+
+            exec(command);
+            console.log(`\n📂 Opened production folder: ${distDir}`);
+          }
+          callback();
+        })
+        .catch(callback);
+    });
+  }
+}
+
 // ==========================================
 // 4. WEBPACK CONFIGURATION
 // ==========================================
@@ -348,8 +419,7 @@ const createConfig = (browser) => {
     entry.devpanel = "./src/devpanel.js";
   }
 
-  // Register Shared 'About' CSS directly (no JS file needed in your src folder)
-  const about = EXT_CONFIG.features.aboutFolder;
+  const about = EXT_CONFIG.features.aboutPages;
   if (about.coffee || about.rate || about.contact) {
     entry.about = "./src/about/about.css";
   }
@@ -382,13 +452,12 @@ const createConfig = (browser) => {
     addHtml("devpanel");
   }
 
-  // Register About HTML Pages
   const addAboutHtml = (name) =>
     htmlPlugins.push(
       new HtmlWebpackPlugin({
         template: `./src/about/${name}.html`,
         filename: `about/${name}.html`,
-        chunks: ["about"], // Automatically injects about.css into the HTML
+        chunks: ["about"],
         minify: isProduction
           ? { collapseWhitespace: true, removeComments: true }
           : false,
@@ -409,8 +478,7 @@ const createConfig = (browser) => {
     copyPatterns.push({
       from: "./src/libs/",
       to: "libs",
-      no,
-      ErrorOnMissing: true,
+      noErrorOnMissing: true,
     });
   }
 
@@ -453,6 +521,7 @@ const createConfig = (browser) => {
       new GenerateManifestPlugin(browser),
       new CopyWebpackPlugin({ patterns: copyPatterns }),
       new StrictSyncPlugin(),
+      new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version), // 🔥 The Auto-Zipper
     ],
     watch: !isProduction,
 
