@@ -98,8 +98,7 @@ const scaffoldFile = (filePath, content) => {
 const templates = {
   html: (title) =>
     `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${title}</title>\n</head>\n<body>\n  <h1>${title} Loaded</h1>\n</body>\n</html>`,
-  uiJs: (name) =>
-    `import "./${name}.css";`,
+  uiJs: (name) => `import "./${name}.css";`,
   uiCss: () =>
     `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
   bgJs: (hasSidepanel) => {
@@ -378,6 +377,8 @@ const createConfig = (browser) => {
 
   const copyPatterns = [
     { from: "./src/assets/", to: "assets", noErrorOnMissing: true },
+    { from: "./README.md", to: "" },
+    { from: "./LICENSE", to: "" }, // IMPORTANT: Replace the license file with your extension's license file
   ];
 
   if (EXT_CONFIG.features.libsFolder) {
