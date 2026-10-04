@@ -35,9 +35,9 @@ const EXT_CONFIG = {
   },
 
   permissions: {
-    storage: true,
-    activeTab: true,
-    scripting: true,
+    storage: false,
+    activeTab: false,
+    scripting: false,
     tabs: false,
     contextMenus: false,
     alarms: false,
@@ -51,7 +51,7 @@ const EXT_CONFIG = {
   },
 
   features: {
-    popup: true, // Requires src/popup.html & src/popup.js
+    popup: false, // Requires src/popup.html & src/popup.js
     sidepanel: false, // Requires src/sidepanel.html & src/sidepanel.js
     devtools: false, // Requires src/devtools.html/js & src/devpanel.html/js
     background: false, // Requires src/background.js
@@ -107,13 +107,9 @@ const templates = {
   contentJs: (name) => `import "./${name}.css";`,
   contentCss: () => ``,
   devtoolsJs: () => `// USE CASE 1: Top-Level Panel
-// Creates a brand new, dedicated tab at the very top of the DevTools window (like Elements, Console, Network).
-// Best for: Massive, standalone debugging tools that need a lot of screen space (e.g., React DevTools).
 chrome.devtools.panels.create("My Panel", null, "devpanel.html", () => {});
 
 // USE CASE 2: Elements Sidebar Pane
-// Creates a sidebar pane inside the existing "Elements" tab (next to Styles, Computed, Event Listeners).
-// Best for: Tools that specifically analyze or modify the HTML DOM node that the user has currently selected.
 chrome.devtools.panels.elements.createSidebarPane("My Sidebar", (sidebar) => {
   sidebar.setPage("devpanel.html");
 });`,
@@ -154,7 +150,6 @@ const runScaffolder = () => {
   EXT_CONFIG.contentScripts.extra.forEach(checkContentScript);
 };
 
-// Execute immediately before Webpack starts
 runScaffolder();
 
 // ==========================================
@@ -252,7 +247,7 @@ const generateManifest = (browser) => {
 };
 
 // ==========================================
-// 3. IN-MEMORY MANIFEST PLUGIN
+// 3. CUSTOM PLUGINS
 // ==========================================
 class GenerateManifestPlugin {
   constructor(browser) {
@@ -278,6 +273,44 @@ class GenerateManifestPlugin {
         );
       },
     );
+  }
+}
+
+class StrictSyncPlugin {
+  apply(compiler) {
+    compiler.hooks.afterEmit.tap("StrictSyncPlugin", (compilation) => {
+      const outputPath = compiler.options.output.path;
+      if (!fs.existsSync(outputPath)) return;
+
+      // Create a Set of exactly what Webpack generated on this specific run
+      const expectedFiles = new Set(Object.keys(compilation.assets));
+
+      // Recursively read the physical output folder
+      const walkDir = (dir, fileList = []) => {
+        fs.readdirSync(dir).forEach((file) => {
+          const filePath = path.join(dir, file);
+          if (fs.statSync(filePath).isDirectory()) {
+            walkDir(filePath, fileList);
+          } else {
+            // Ensure paths match Webpack's forward-slash format
+            fileList.push(
+              path.relative(outputPath, filePath).split(path.sep).join("/"),
+            );
+          }
+        });
+        return fileList;
+      };
+
+      const physicalFiles = walkDir(outputPath);
+
+      // Instantly delete any physical file that wasn't strictly generated in this run
+      physicalFiles.forEach((file) => {
+        if (!expectedFiles.has(file)) {
+          fs.unlinkSync(path.join(outputPath, file));
+          console.log(`🗑️ StrictSync removed ghost file: ${file}`);
+        }
+      });
+    });
   }
 }
 
@@ -340,11 +373,22 @@ const createConfig = (browser) => {
 
   return {
     mode: isProduction ? "production" : "development",
+
+    // 🔥 PERSISTENT CACHING WITH STRICT DEPENDENCIES
+    cache: {
+      type: "filesystem",
+      buildDependencies: {
+        // This is the magic line. It forces Webpack to completely bust its cache
+        // the moment you hit "save" on this config file, ensuring toggles always apply.
+        config: [__filename],
+      },
+    },
+
     entry,
     output: {
       path: path.join(outputDir, browser),
       filename: "[name].js",
-      clean: true,
+      clean: false, // Turned off so StrictSyncPlugin handles cleanup flawlessly
     },
     devtool: false,
     module: {
@@ -368,8 +412,15 @@ const createConfig = (browser) => {
       new MiniCssExtractPlugin({ filename: "[name].css" }),
       new GenerateManifestPlugin(browser),
       new CopyWebpackPlugin({ patterns: copyPatterns }),
+      new StrictSyncPlugin(), // 🔥 Cleans the output directory dynamically
     ],
     watch: !isProduction,
+
+    // 🔥 THE PAUSER
+    watchOptions: {
+      aggregateTimeout: 1000, // Waits 600ms after you stop saving to trigger a rebuild
+      ignored: /node_modules/, // Saves CPU and battery by ignoring module changes
+    },
   };
 };
 
