@@ -339,6 +339,26 @@ class GenerateManifestPlugin {
   }
 }
 
+class RemoveDummyJsPlugin {
+  apply(compiler) {
+    compiler.hooks.compilation.tap("RemoveDummyJsPlugin", (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: "RemoveDummyJsPlugin",
+          stage:
+            compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_INLINE,
+        },
+        (assets) => {
+          // Find and delete the dummy JS file from Webpack's memory
+          if (assets["about/about.js"]) {
+            delete assets["about/about.js"];
+          }
+        },
+      );
+    });
+  }
+}
+
 class StrictSyncPlugin {
   apply(compiler) {
     compiler.hooks.afterEmit.tap("StrictSyncPlugin", (compilation) => {
@@ -405,7 +425,18 @@ class ZipExtensionsPlugin {
           archive.on("error", (err) => reject(err));
 
           archive.pipe(output);
-          archive.directory(outputDir, false);
+
+          // Filters out hidden OS files before zipping
+          archive.directory(outputDir, false, (file) => {
+            const isHidden =
+              file.name.includes(".DS_Store") ||
+              file.name.startsWith("._") ||
+              file.name.includes("Thumbs.db") ||
+              file.name.includes("desktop.ini");
+
+            return isHidden ? false : file;
+          });
+
           archive.finalize();
         });
       };
@@ -506,7 +537,6 @@ const createConfig = (browser) => {
 
   const copyPatterns = [
     { from: "./src/assets/", to: "assets", noErrorOnMissing: true },
-    { from: "./README.md", to: "" },
     { from: "./LICENSE", to: "" },
   ];
 
@@ -556,6 +586,7 @@ const createConfig = (browser) => {
       new MiniCssExtractPlugin({ filename: "[name].css" }),
       new GenerateManifestPlugin(browser),
       new CopyWebpackPlugin({ patterns: copyPatterns }),
+      new RemoveDummyJsPlugin(),
       new StrictSyncPlugin(),
       new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version), //  The Auto-Zipper
     ],
