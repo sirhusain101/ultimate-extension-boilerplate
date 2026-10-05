@@ -66,6 +66,7 @@ const EXT_CONFIG = {
       coffee: true,
       rate: true,
       contact: true,
+      bgInjector: true,
     },
   },
 
@@ -115,8 +116,9 @@ const templates = {
   uiJs: (name) => `import "./${name}.css";`,
   uiCss: () =>
     `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
-  bgJs: (hasSidepanel) => {
-    let code = ``;
+  bgJs: (hasSidepanel, hasInjector) => {
+    let code = `chrome.runtime.onInstalled.addListener(() => {\n  console.log("Extension installed");\n});\n`;
+
     if (hasSidepanel) {
       code += `\n// Open sidepanel on icon click (Chrome)\n`;
       code += `if (typeof chrome !== 'undefined' && chrome.sidePanel) {\n`;
@@ -128,6 +130,16 @@ const templates = {
       code += `    browser.sidebarAction.toggle();\n`;
       code += `  });\n`;
       code += `}\n`;
+    }
+
+    // 🔥 Injects the listener if the switchboard toggle is true
+    if (hasInjector) {
+      code += `\n// Listen for message from About Section Injector\n`;
+      code += `chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {\n`;
+      code += `  if (request.action === "openLocalPage") {\n`;
+      code += `    chrome.tabs.create({ url: chrome.runtime.getURL(request.page) });\n`;
+      code += `  }\n`;
+      code += `});\n`;
     }
     return code;
   },
@@ -163,7 +175,10 @@ const runScaffolder = () => {
   if (EXT_CONFIG.features.background) {
     scaffoldFile(
       "src/background.js",
-      templates.bgJs(EXT_CONFIG.features.sidepanel),
+      templates.bgJs(
+        EXT_CONFIG.features.sidepanel,
+        EXT_CONFIG.features.aboutPages.bgInjector,
+      ),
     );
   }
 
