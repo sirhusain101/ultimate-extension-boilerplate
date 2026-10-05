@@ -43,7 +43,7 @@ const EXT_CONFIG = {
   permissions: {
     storage: true,
     activeTab: true,
-    scripting: true,
+    scripting: false,
     tabs: false,
     contextMenus: false,
     alarms: false,
@@ -58,7 +58,7 @@ const EXT_CONFIG = {
 
   features: {
     popup: true,
-    sidepanel: true,
+    sidepanel: false,
     devtools: false,
     background: true,
     libsFolder: false,
@@ -74,6 +74,7 @@ const EXT_CONFIG = {
       enabled: true,
       matches: ["<all_urls>", "https://*.youtube.com/*"],
       css: true,
+      libs: ["libs/jspdf.umd.min.js"],
     },
     extra: [
       {
@@ -81,12 +82,14 @@ const EXT_CONFIG = {
         name: "content_website1",
         matches: ["https://*.youtube.com/*"],
         css: true,
+        libs: [],
       },
       {
         enabled: false,
         name: "content_website2",
         matches: ["https://*.github.com/*"],
-        css: false,
+        css: true,
+        libs: [],
       },
     ],
   },
@@ -196,19 +199,37 @@ const generateManifest = (browser) => {
   );
 
   const activeContentScripts = [];
+
   if (EXT_CONFIG.contentScripts.default.enabled) {
+    const scriptDef = EXT_CONFIG.contentScripts.default;
+    const jsFiles = [];
+
+    // Inject any unminified libraries first
+    if (scriptDef.libs && scriptDef.libs.length > 0) {
+      jsFiles.push(...scriptDef.libs);
+    }
+    // Inject the main Webpack-bundled script last
+    jsFiles.push("content.js");
+
     activeContentScripts.push({
-      matches: EXT_CONFIG.contentScripts.default.matches,
-      js: ["content.js"],
-      ...(EXT_CONFIG.contentScripts.default.css && { css: ["content.css"] }),
+      matches: scriptDef.matches,
+      js: jsFiles,
+      ...(scriptDef.css && { css: ["content.css"] }),
     });
   }
 
   EXT_CONFIG.contentScripts.extra.forEach((script) => {
     if (script.enabled) {
+      const jsFiles = [];
+
+      if (script.libs && script.libs.length > 0) {
+        jsFiles.push(...script.libs);
+      }
+      jsFiles.push(`${script.name}.js`);
+
       activeContentScripts.push({
         matches: script.matches,
-        js: [`${script.name}.js`],
+        js: jsFiles,
         ...(script.css && { css: [`${script.name}.css`] }),
       });
     }
