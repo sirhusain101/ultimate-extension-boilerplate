@@ -66,7 +66,7 @@ const EXT_CONFIG = {
       coffee: true,
       rate: true,
       contact: true,
-      bgInjector: true,
+      jsInjector: true,
     },
   },
 
@@ -106,7 +106,7 @@ const scaffoldFile = (filePath, content) => {
   }
   if (!fs.existsSync(absolutePath)) {
     fs.writeFileSync(absolutePath, content, "utf8");
-    console.log(`✨ Auto-generated missing file: ${filePath}`);
+    console.log(`Auto-generated missing file: ${filePath}`);
   }
 };
 
@@ -117,7 +117,7 @@ const templates = {
   uiCss: () =>
     `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
   bgJs: (hasSidepanel, hasInjector) => {
-    let code = `chrome.runtime.onInstalled.addListener(() => {\n  console.log("Extension installed");\n});\n`;
+    let code = ``;
 
     if (hasSidepanel) {
       code += `\n// Open sidepanel on icon click (Chrome)\n`;
@@ -143,8 +143,18 @@ const templates = {
     }
     return code;
   },
-  contentJs: (name) => `import "./${name}.css";`,
+
+  contentJs: (name, hasInjector) => {
+    let code = `import "./${name}.css";\n`;
+    if (hasInjector) {
+      code += `import { displayAbout } from "./about/about.js";\n\n`;
+      code += `// displayAbout(document.body); // Uncomment to inject the UI\n`;
+    }
+    return code;
+  },
+
   contentCss: () => ``,
+
   devtoolsJs: () => `// USE CASE 1: Top-Level Panel
 chrome.devtools.panels.create("My Panel", null, "devpanel.html", () => {});
 
@@ -177,7 +187,7 @@ const runScaffolder = () => {
       "src/background.js",
       templates.bgJs(
         EXT_CONFIG.features.sidepanel,
-        EXT_CONFIG.features.aboutFolder.bgInjector,
+        EXT_CONFIG.features.aboutFolder.jsInjector,
       ),
     );
   }
@@ -185,7 +195,10 @@ const runScaffolder = () => {
   const checkContentScript = (scriptObj) => {
     if (scriptObj.enabled) {
       const name = scriptObj.name || "content";
-      scaffoldFile(`src/${name}.js`, templates.contentJs(name));
+      scaffoldFile(
+        `src/${name}.js`,
+        templates.contentJs(name, EXT_CONFIG.features.aboutFolder.jsInjector),
+      );
       if (scriptObj.css)
         scaffoldFile(`src/${name}.css`, templates.contentCss());
     }
