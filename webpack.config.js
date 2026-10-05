@@ -132,7 +132,7 @@ const templates = {
       code += `}\n`;
     }
 
-    // 🔥 Injects the listener if the switchboard toggle is true
+    //  Injects the listener if the switchboard toggle is true
     if (hasInjector) {
       code += `\n// Listen for message from About Section Injector\n`;
       code += `chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {\n`;
@@ -177,7 +177,7 @@ const runScaffolder = () => {
       "src/background.js",
       templates.bgJs(
         EXT_CONFIG.features.sidepanel,
-        EXT_CONFIG.features.aboutPages.bgInjector,
+        EXT_CONFIG.features.aboutFolder.bgInjector,
       ),
     );
   }
@@ -393,7 +393,7 @@ class ZipExtensionsPlugin {
             `${targetBrowser}-v${this.version}.zip`,
           );
           const output = fs.createWriteStream(zipFilePath);
-          // 🔥 Level 6 is "normal" compression (balance of speed and file size)
+          //  Level 6 is "normal" compression (balance of speed and file size)
           const archive = new ZipArchive({ zlib: { level: 6 } });
 
           output.on("close", () => {
@@ -419,7 +419,7 @@ class ZipExtensionsPlugin {
 
       Promise.all(tasks)
         .then(() => {
-          // 🔥 Open the dist folder only AFTER the final browser (Firefox) finishes zipping
+          //  Open the dist folder only AFTER the final browser (Firefox) finishes zipping
           if (this.browser === "firefox") {
             const command =
               process.platform === "win32"
@@ -455,9 +455,9 @@ const createConfig = (browser) => {
     entry.devpanel = "./src/devpanel.js";
   }
 
-  const about = EXT_CONFIG.features.aboutPages;
+  const about = EXT_CONFIG.features.aboutFolder;
   if (about.coffee || about.rate || about.contact) {
-    entry.about = "./src/about/about.css";
+    entry["about/about"] = "./src/about/about.css";
   }
 
   if (EXT_CONFIG.contentScripts.default.enabled) {
@@ -493,7 +493,7 @@ const createConfig = (browser) => {
       new HtmlWebpackPlugin({
         template: `./src/about/${name}.html`,
         filename: `about/${name}.html`,
-        chunks: ["about"],
+        chunks: ["about/about"],
         minify: isProduction
           ? { collapseWhitespace: true, removeComments: true }
           : false,
@@ -557,7 +557,7 @@ const createConfig = (browser) => {
       new GenerateManifestPlugin(browser),
       new CopyWebpackPlugin({ patterns: copyPatterns }),
       new StrictSyncPlugin(),
-      new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version), // 🔥 The Auto-Zipper
+      new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version), //  The Auto-Zipper
     ],
     watch: !isProduction,
 
