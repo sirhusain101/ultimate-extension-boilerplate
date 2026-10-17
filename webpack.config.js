@@ -307,8 +307,8 @@ const generateManifest = (browser) => {
     }),
 
     icons: {
-      48: "assets/icon-48.png",
-      128: "assets/icon-128.png",
+      48: "assets/48.png",
+      128: "assets/128.png",
     },
 
     ...(browser === "firefox" && {
@@ -563,13 +563,6 @@ const createConfig = (browser) => {
 
   return {
     mode: isProduction ? "production" : "development",
-
-    cache: {
-      type: "filesystem",
-      buildDependencies: {
-        config: [__filename],
-      },
-    },
 
     entry,
     output: {
