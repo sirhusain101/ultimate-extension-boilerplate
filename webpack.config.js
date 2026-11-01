@@ -46,6 +46,7 @@ const EXT_CONFIG = {
     scripting: false,
     tabs: false,
     contextMenus: false,
+    clipboardRead: false,
     alarms: false,
     downloads: false,
   },
