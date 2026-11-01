@@ -188,7 +188,7 @@ const runScaffolder = () => {
       "src/background.js",
       templates.bgJs(
         EXT_CONFIG.features.sidepanel,
-        EXT_CONFIG.features.aboutFolder.jsInjector,
+        EXT_CONFIG.features.aboutFolder?.jsInjector,
       ),
     );
   }
@@ -198,7 +198,7 @@ const runScaffolder = () => {
       const name = scriptObj.name || "content";
       scaffoldFile(
         `src/${name}.js`,
-        templates.contentJs(name, EXT_CONFIG.features.aboutFolder.jsInjector),
+        templates.contentJs(name, EXT_CONFIG.features.aboutFolder?.jsInjector),
       );
       if (scriptObj.css)
         scaffoldFile(`src/${name}.css`, templates.contentCss());
@@ -500,7 +500,7 @@ const createConfig = (browser) => {
     entry.devpanel = "./src/devpanel.js";
   }
 
-  const about = EXT_CONFIG.features.aboutFolder;
+  const about = EXT_CONFIG.features.aboutFolder || {};
   if (about.coffee || about.rate || about.contact) {
     entry["about/about"] = "./src/about/about.css";
   }
