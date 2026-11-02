@@ -59,11 +59,12 @@ const EXT_CONFIG = {
 
   features: {
     popup: true,
+    actionClick: false, // ⚠️ MUTUALLY EXCLUSIVE: Cannot be true if 'popup' is true
     sidepanel: false,
     devtools: false,
     background: true,
     libsFolder: false,
-    aboutPages: {
+    aboutFolder: {
       coffee: true,
       rate: true,
       contact: true,
@@ -97,6 +98,17 @@ const EXT_CONFIG = {
   },
 };
 
+// 🔥 ENFORCE MUTUAL EXCLUSIVITY
+if (EXT_CONFIG.features.popup && EXT_CONFIG.features.actionClick) {
+  console.error(
+    "\n❌ WEBPACK CONFIG ERROR: 'popup' and 'actionClick' cannot both be true.",
+  );
+  console.error(
+    "Chrome only allows one icon action. Please set one to false in EXT_CONFIG.\n",
+  );
+  process.exit(1); // Kills the build instantly
+}
+
 // ==========================================
 // 1.5 AUTO-SCAFFOLDER
 // ==========================================
@@ -117,7 +129,8 @@ const templates = {
   uiJs: (name) => `import "./${name}.css";`,
   uiCss: () =>
     `* {\n  box-sizing: border-box;\n  margin: 0;\n  padding: 0;\n}\nbody {\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial;\n  padding: 16px;\n}`,
-  bgJs: (hasSidepanel, hasInjector) => {
+
+  bgJs: (hasSidepanel, hasActionClick, hasInjector) => {
     let code = ``;
 
     if (hasSidepanel) {
@@ -133,7 +146,16 @@ const templates = {
       code += `}\n`;
     }
 
-    //  Injects the listener if the switchboard toggle is true
+    if (hasActionClick) {
+      code += `\n// Trigger background task on icon click\n`;
+      code += `if (typeof chrome !== 'undefined' && chrome.action) {\n`;
+      code += `  chrome.action.onClicked.addListener((tab) => {\n`;
+      code += `    console.log("Extension icon clicked on tab:", tab.id);\n`;
+      code += `    // Add your logic here\n`;
+      code += `  });\n`;
+      code += `}\n`;
+    }
+
     if (hasInjector) {
       code += `\n// Listen for message from About Section Injector\n`;
       code += `chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {\n`;
@@ -188,6 +210,7 @@ const runScaffolder = () => {
       "src/background.js",
       templates.bgJs(
         EXT_CONFIG.features.sidepanel,
+        EXT_CONFIG.features.actionClick,
         EXT_CONFIG.features.aboutFolder?.jsInjector,
       ),
     );
@@ -233,11 +256,9 @@ const generateManifest = (browser) => {
     const scriptDef = EXT_CONFIG.contentScripts.default;
     const jsFiles = [];
 
-    // Inject any unminified libraries first
     if (scriptDef.libs && scriptDef.libs.length > 0) {
       jsFiles.push(...scriptDef.libs);
     }
-    // Inject the main Webpack-bundled script last
     jsFiles.push("content.js");
 
     activeContentScripts.push({
@@ -275,8 +296,14 @@ const generateManifest = (browser) => {
       host_permissions: activeHostPermissions,
     }),
 
+    // 🔥 Action appears ABOVE sidepanel in the final manifest JSON
+    ...(EXT_CONFIG.features.popup && !EXT_CONFIG.features.sidepanel
+      ? { action: { default_popup: "popup.html" } }
+      : EXT_CONFIG.features.sidepanel || EXT_CONFIG.features.actionClick
+        ? { action: {} }
+        : {}),
+
     ...(EXT_CONFIG.features.sidepanel && {
-      action: {},
       ...(browser === "chrome"
         ? { side_panel: { default_path: "sidepanel.html" } }
         : {
@@ -286,11 +313,6 @@ const generateManifest = (browser) => {
             },
           }),
     }),
-
-    ...(EXT_CONFIG.features.popup &&
-      !EXT_CONFIG.features.sidepanel && {
-        action: { default_popup: "popup.html" },
-      }),
 
     ...(EXT_CONFIG.features.devtools && {
       devtools_page: "devtools.html",
@@ -363,7 +385,6 @@ class RemoveDummyJsPlugin {
             compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_INLINE,
         },
         (assets) => {
-          // Find and delete the dummy JS file from Webpack's memory
           if (assets["about/about.js"]) {
             delete assets["about/about.js"];
           }
@@ -413,7 +434,6 @@ class ZipExtensionsPlugin {
     this.version = version;
   }
   apply(compiler) {
-    // Only run this plugin during the production build
     if (compiler.options.mode !== "production") return;
 
     compiler.hooks.done.tapAsync("ZipExtensionsPlugin", (stats, callback) => {
@@ -427,7 +447,6 @@ class ZipExtensionsPlugin {
             `${targetBrowser}-v${this.version}.zip`,
           );
           const output = fs.createWriteStream(zipFilePath);
-          //  Level 6 is "normal" compression (balance of speed and file size)
           const archive = new ZipArchive({ zlib: { level: 6 } });
 
           output.on("close", () => {
@@ -440,7 +459,6 @@ class ZipExtensionsPlugin {
 
           archive.pipe(output);
 
-          // Filters out hidden OS files before zipping
           archive.directory(outputDir, false, (file) => {
             const isHidden =
               file.name.includes(".DS_Store") ||
@@ -457,14 +475,12 @@ class ZipExtensionsPlugin {
 
       const tasks = [createZip(this.browser)];
 
-      // If we are currently building Chrome, also create an identical zip for Edge
       if (this.browser === "chrome") {
         tasks.push(createZip("edge"));
       }
 
       Promise.all(tasks)
         .then(() => {
-          //  Open the dist folder only AFTER the final browser (Firefox) finishes zipping
           if (this.browser === "firefox") {
             const command =
               process.platform === "win32"
@@ -595,7 +611,7 @@ const createConfig = (browser) => {
       new CopyWebpackPlugin({ patterns: copyPatterns }),
       new RemoveDummyJsPlugin(),
       new StrictSyncPlugin(),
-      new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version), //  The Auto-Zipper
+      new ZipExtensionsPlugin(browser, EXT_CONFIG.meta.version),
     ],
     watch: !isProduction,
 
