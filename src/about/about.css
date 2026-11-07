@@ -52,4 +52,20 @@ h1 {
   #store-buttons-container {
     flex-direction: column;
   }
+
+  h1 {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+
+    /* 1. Center the text alignment */
+    text-align: center;
+
+    /* 2. Center the container itself and prevent overflow */
+    display: block;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+  }
 }
